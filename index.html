@@ -1,21 +1,159 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html>
-  <head>
-    <script src="https://cdn-webgl.eegeo.com/eegeojs/early_access/latest/eegeo.js"></script>
-   
-      <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.0.1/leaflet.css" rel="stylesheet" />
-       
-  </head>
-  <body>
-  <div id="content" style="position: relative">
-    <div id="map" style="height: 600px"></div>
-    <script>
-        var map = L.eeGeo.map('map', '63f41aaad308eff25ecb147bf0f89939', {
-          center: [51.517327, -0.120005],
-          zoom: 15
-        });
-    </script>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>3D - test</title>
 
-  </div>
-  </body>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.9/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.9/"></script>
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/SceneView",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Legend"
+    ], function(
+      Map, SceneView, FeatureLayer, Legend
+    ) {
+
+      // limit visualization to southeast U.S. counties
+      var defExp = ["STATE = 'IL'"
+      ];
+
+      /*****************************************************************
+       * In this case we set two visual variables on the renderer. Since
+       * we're defining both size and color based on data values, there's
+       * no need to specify defaults in the `symbol` property of the
+       * renderer. In 3D it is easier to visually perceive size differences
+       * when they are combined with color. Therefore we set up both a
+       * size and a color visual variable based on the values of the same
+       * field.d
+       *
+       * Notice that the data value ramps for each is slightly different.
+       * Color allows us to see the spatial trend in a tight range, whereas
+       * size can be used to observe nuances between features of the same
+       * color.
+       *****************************************************************/
+
+      var renderer = {
+        type: "simple", // autocasts as new SimpleRenderer()
+        symbol: {
+          type: "polygon-3d", // autocasts as new PolygonSymbol3D()
+          symbolLayers: [{
+            type: "extrude" // autocasts as new ExtrudeSymbol3DLayer()
+          }]
+        },
+        visualVariables: [{
+          type: "size",
+          field: "MP06024a_B",
+          stops: [
+          {
+            value: 2000,
+            size: 2000,
+            label: "1,000"
+          },
+
+          {
+            value: 500000,
+            size: 500000,
+            label: ">200,000"
+          }]
+        }, {
+          type: "color",
+          field: "MP06024a_B",
+          normalizationField: "MP06025a_B",
+          legendOptions: {
+            title: "Democratic divided by Republican"
+          },
+          stops: [
+          {
+            value: 0.8,
+            color: "#ca0120",
+            label: "<0.8"
+          },
+          {
+            value: 1,
+            color: "white",
+            label: "1"
+          },
+          {
+            value: 1.2,
+            color: "#0d74b1",
+            label: ">1.2"
+          }]
+        }]
+      };
+
+      var povLayer = new FeatureLayer({
+        url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/counties_politics_poverty/FeatureServer/0",
+        renderer: renderer,
+        title: "Political party affiliation with Democratic: Illinois Counties",
+        outFields: ["*"],
+        popupTemplate: { // autocasts as new PopupTemplate()
+          title: "{COUNTY}, {STATE}",
+          content: "{MP06024a_B} of {TOTPOP_CY} people with Democratic affiliation.",
+          fieldInfos: [
+          {
+            fieldName: "MP06024a_B",
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          }, {
+            fieldName: "TOTPOP_CY",
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          }]
+        },
+        definitionExpression: defExp // only display counties from states in defExp
+      });
+
+      var map = new Map({
+        basemap: "gray",
+        layers: [povLayer]
+      });
+
+      var view = new SceneView({
+        container: "viewDiv",
+        map: map,
+        camera: {
+          position: {
+            latitude: 31.24237,
+            longitude: -94.72943,
+            z: 1234560
+          },
+          tilt: 45,
+          heading: 30
+        }
+      });
+
+      var legend = new Legend({
+        view: view
+      });
+
+      view.ui.add(legend, "bottom-right");
+
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
+
 </html>
